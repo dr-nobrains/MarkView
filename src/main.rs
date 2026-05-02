@@ -87,18 +87,6 @@ const PREF_SCHEME: &str = "color-scheme";
 const DEFAULT_THEME: &str = "default";
 const DEFAULT_SCHEME: &str = "Adwaita-dark";
 
-const EDITOR_SCHEMES: &[&str] = &[
-    "Adwaita-dark",
-    "Adwaita",
-    "Kate",
-    "Kate-dark",
-    "Cobalt",
-    "Solarized-dark",
-    "Solarized-light",
-    "Monokai",
-    "Builder",
-    "Oblivion",
-];
 
 fn config_path() -> PathBuf {
     let config = std::env::var_os("XDG_CONFIG_HOME")
@@ -261,6 +249,8 @@ fn build_ui(app: &Application) {
             .unwrap(),
     ));
     let scheme_mgr = sourceview5::StyleSchemeManager::default();
+    scheme_mgr.append_search_path("data/styles");
+
     let scheme_id = load_pref(PREF_SCHEME, DEFAULT_SCHEME);
     if let Some(scheme) = scheme_mgr.scheme(&scheme_id) {
         source_buffer.set_style_scheme(Some(&scheme));
@@ -624,15 +614,15 @@ fn build_ui(app: &Application) {
             });
 
             let scheme_mgr = sourceview5::StyleSchemeManager::default();
-            let all_ids: Vec<_> = scheme_mgr.scheme_ids();
+            scheme_mgr.append_search_path("data/styles");
+            let mut all_ids: Vec<_> = scheme_mgr.scheme_ids();
+            all_ids.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
             let scheme_model = gio::ListStore::new::<StringObject>();
             let mut scheme_ids = Vec::new();
-            for &pref_id in EDITOR_SCHEMES {
-                if let Some(id) = all_ids.iter().find(|s| s.as_str().eq_ignore_ascii_case(pref_id)) {
-                    if let Some(scheme) = scheme_mgr.scheme(id.as_str()) {
-                        scheme_model.append(&StringObject::new(&scheme.name().to_string()));
-                        scheme_ids.push(id.to_string());
-                    }
+            for id in all_ids.iter() {
+                if let Some(scheme) = scheme_mgr.scheme(id.as_str()) {
+                    scheme_model.append(&StringObject::new(&scheme.name().to_string()));
+                    scheme_ids.push(id.to_string());
                 }
             }
             if scheme_ids.is_empty() {

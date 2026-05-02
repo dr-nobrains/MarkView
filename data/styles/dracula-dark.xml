@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<style-scheme id="dracula-dark" _name="Dracula (Dark)" version="1.0">
+  <author>Generated from Ptyxis</author>
+  <_description>Dracula (Dark) color scheme</_description>
+  <color name="foreground" value="#f8f8f2"/>
+  <color name="background" value="#282a36"/>
+  <color name="cursor" value="#f8f8f2"/>
+  <color name="color0" value="#21222c"/>
+  <color name="color1" value="#ff5555"/>
+  <color name="color2" value="#50fa7b"/>
+  <color name="color3" value="#f1fa8c"/>
+  <color name="color4" value="#bd93f9"/>
+  <color name="color5" value="#ff79c6"/>
+  <color name="color6" value="#8be9fd"/>
+  <color name="color7" value="#f8f8f2"/>
+  <color name="color8" value="#6272a4"/>
+  <color name="color9" value="#ff6e6e"/>
+  <color name="color10" value="#69ff94"/>
+  <color name="color11" value="#ffffa5"/>
+  <color name="color12" value="#d6acff"/>
+  <color name="color13" value="#ff92df"/>
+  <color name="color14" value="#a4ffff"/>
+  <color name="color15" value="#ffffff"/>
+
+  <!-- Basic styles -->
+  <style name="text" foreground="foreground" background="background"/>
+  <style name="cursor" foreground="cursor"/>
+  <style name="current-line" background="color8"/>
+  <style name="line-numbers" foreground="color8" background="background"/>
+  <style name="draw-spaces" foreground="color8"/>
+  
+  <!-- Syntax highlighting -->
+  <style name="def:comment" foreground="color8" italic="true"/>
+  <style name="def:shebang" foreground="color8" italic="true"/>
+  <style name="def:doc-comment-element" bold="true"/>
+  
+  <style name="def:constant" foreground="color9"/>
+  <style name="def:string" foreground="color2"/>
+  <style name="def:special-char" foreground="color1"/>
+  <style name="def:special-constant" foreground="color1" bold="true"/>
+  
+  <style name="def:number" foreground="color3"/>
+  <style name="def:floating-point" foreground="color3"/>
+  <style name="def:boolean" foreground="color3"/>
+  
+  <style name="def:keyword" foreground="color5" bold="true"/>
+  <style name="def:builtin" foreground="color6" bold="true"/>
+  <style name="def:variable" foreground="color4"/>
+  <style name="def:identifier" foreground="foreground"/>
+  <style name="def:function" foreground="color4"/>
+  <style name="def:statement" foreground="color5"/>
+  <style name="def:type" foreground="color6"/>
+  
+  <style name="def:emphasis" italic="true"/>
+  <style name="def:strong-emphasis" bold="true"/>
+  <style name="def:inline-code" foreground="color11" background="color0"/>
+  
+  <style name="def:insertion" foreground="color2" background="color0"/>
+  <style name="def:deletion" foreground="color1" background="color0"/>
+  
+  <style name="def:link-text" foreground="color4" italic="true" underline="single"/>
+  <style name="def:link-symbol" foreground="color4" italic="true"/>
+  <style name="def:link-destination" foreground="color6" underline="single"/>
+  
+  <style name="def:heading" foreground="color4" bold="true"/>
+  <style name="def:thematic-break" foreground="color4" bold="true"/>
+  <style name="def:preformatted-section" foreground="color12"/>
+  
+  <style name="def:list-marker" foreground="color5"/>
+  <style name="def:error" foreground="foreground" background="color1" bold="true"/>
+</style-scheme>

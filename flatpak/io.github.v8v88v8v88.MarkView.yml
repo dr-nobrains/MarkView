@@ -12,6 +12,8 @@ modules:
     build-commands:
       - bash -c 'export PATH="/usr/lib/sdk/rust-stable/bin:$PATH" && cargo build --release'
       - install -Dm755 target/release/gtk-markdown-viewer /app/bin/markview
+      - mkdir -p /app/share/gtksourceview-5/styles
+      - install -Dm644 data/styles/*.xml /app/share/gtksourceview-5/styles/
     sources:
       - type: dir
         path: ..

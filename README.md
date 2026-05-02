@@ -2,6 +2,8 @@
 
 MarkView is a sleek, GTK-based Markdown viewer that provides real-time rendering and syntax highlighting.
 
+![markview](screenshot.png)
+
 ## Features
 
 - Real-time Markdown rendering

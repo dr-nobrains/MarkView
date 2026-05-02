@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<style-scheme id="3024-dark" _name="3024 (Dark)" version="1.0">
+  <author>Generated from Ptyxis</author>
+  <_description>3024 (Dark) color scheme</_description>
+  <color name="background" value="#090300"/>
+  <color name="foreground" value="#A5A2A2"/>
+  <color name="cursor" value="#A5A2A2"/>
+  <color name="color0" value="#090300"/>
+  <color name="color1" value="#DB2D20"/>
+  <color name="color2" value="#01A252"/>
+  <color name="color3" value="#FDED02"/>
+  <color name="color4" value="#01A0E4"/>
+  <color name="color5" value="#A16A94"/>
+  <color name="color6" value="#B5E4F4"/>
+  <color name="color7" value="#A5A2A2"/>
+  <color name="color8" value="#5C5855"/>
+  <color name="color9" value="#E8BBD0"/>
+  <color name="color10" value="#3A3432"/>
+  <color name="color11" value="#4A4543"/>
+  <color name="color12" value="#807D7C"/>
+  <color name="color13" value="#D6D5D4"/>
+  <color name="color14" value="#CDAB53"/>
+  <color name="color15" value="#F7F7F7"/>
+
+  <!-- Basic styles -->
+  <style name="text" foreground="foreground" background="background"/>
+  <style name="cursor" foreground="cursor"/>
+  <style name="current-line" background="color8"/>
+  <style name="line-numbers" foreground="color8" background="background"/>
+  <style name="draw-spaces" foreground="color8"/>
+  
+  <!-- Syntax highlighting -->
+  <style name="def:comment" foreground="color8" italic="true"/>
+  <style name="def:shebang" foreground="color8" italic="true"/>
+  <style name="def:doc-comment-element" bold="true"/>
+  
+  <style name="def:constant" foreground="color9"/>
+  <style name="def:string" foreground="color2"/>
+  <style name="def:special-char" foreground="color1"/>
+  <style name="def:special-constant" foreground="color1" bold="true"/>
+  
+  <style name="def:number" foreground="color3"/>
+  <style name="def:floating-point" foreground="color3"/>
+  <style name="def:boolean" foreground="color3"/>
+  
+  <style name="def:keyword" foreground="color5" bold="true"/>
+  <style name="def:builtin" foreground="color6" bold="true"/>
+  <style name="def:variable" foreground="color4"/>
+  <style name="def:identifier" foreground="foreground"/>
+  <style name="def:function" foreground="color4"/>
+  <style name="def:statement" foreground="color5"/>
+  <style name="def:type" foreground="color6"/>
+  
+  <style name="def:emphasis" italic="true"/>
+  <style name="def:strong-emphasis" bold="true"/>
+  <style name="def:inline-code" foreground="color11" background="color0"/>
+  
+  <style name="def:insertion" foreground="color2" background="color0"/>
+  <style name="def:deletion" foreground="color1" background="color0"/>
+  
+  <style name="def:link-text" foreground="color4" italic="true" underline="single"/>
+  <style name="def:link-symbol" foreground="color4" italic="true"/>
+  <style name="def:link-destination" foreground="color6" underline="single"/>
+  
+  <style name="def:heading" foreground="color4" bold="true"/>
+  <style name="def:thematic-break" foreground="color4" bold="true"/>
+  <style name="def:preformatted-section" foreground="color12"/>
+  
+  <style name="def:list-marker" foreground="color5"/>
+  <style name="def:error" foreground="foreground" background="color1" bold="true"/>
+</style-scheme>

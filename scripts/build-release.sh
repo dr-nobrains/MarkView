@@ -9,5 +9,6 @@ mkdir -p "$NAME"
 cargo build --release
 cp target/release/gtk-markdown-viewer "$NAME/markview"
 cp LICENSE README.md "$NAME/"
+cp -r data "$NAME/"
 tar czvf "${NAME}.tar.gz" "$NAME"
 echo "Built ${NAME}.tar.gz"
