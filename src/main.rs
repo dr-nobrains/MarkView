@@ -44,6 +44,26 @@ const PREVIEW_CSS_DARK: &str = r#"
     strong { color: #f0f0f0; }
     em { color: #d0d0d0; }
     .placeholder { color: #a8a8a8; text-align: center; margin-top: 2em; }
+    .metadata { 
+        background: #252525; 
+        border: 1px dashed #444; 
+        border-radius: 8px; 
+        padding: 12px; 
+        margin-bottom: 20px; 
+        font-family: 'JetBrains Mono', monospace; 
+        font-size: 0.85em;
+        color: #a0a0a0;
+        white-space: pre-wrap;
+    }
+    .metadata::before {
+        content: "metadata";
+        display: block;
+        font-size: 0.7em;
+        color: #666;
+        margin-bottom: 6px;
+        border-bottom: 1px solid #333;
+        padding-bottom: 2px;
+    }
 "#;
 
 const PRINT_CSS: &str = r#"
@@ -80,12 +100,72 @@ const PREVIEW_CSS_LIGHT: &str = r#"
     strong { color: #1c1c1c; }
     em { color: #363536; }
     .placeholder { color: #6b6b6b; text-align: center; margin-top: 2em; }
+    .metadata { 
+        background: #f0eff1; 
+        border: 1px dashed #c0bfc4; 
+        border-radius: 8px; 
+        padding: 12px; 
+        margin-bottom: 20px; 
+        font-family: 'JetBrains Mono', monospace; 
+        font-size: 0.85em;
+        color: #666;
+        white-space: pre-wrap;
+    }
+    .metadata::before {
+        content: "metadata";
+        display: block;
+        font-size: 0.7em;
+        color: #999;
+        margin-bottom: 6px;
+        border-bottom: 1px solid #d1d0d5;
+        padding-bottom: 2px;
+    }
 "#;
 
 const PREF_THEME: &str = "theme";
 const PREF_SCHEME: &str = "color-scheme";
+const PREF_SYNC_SCROLL: &str = "sync-scroll";
+const PREF_DOM_INJECTION: &str = "dom-injection";
+const PREF_DEBOUNCE: &str = "debounce-duration";
+const PREF_SHOW_METADATA: &str = "metadata-mode";
+const PREF_DEFAULT_VIEW: &str = "default-view";
+const PREF_READABLE_LINE: &str = "readable-line-length";
+const PREF_MAX_WIDTH: &str = "max-content-width";
+
 const DEFAULT_THEME: &str = "default";
 const DEFAULT_SCHEME: &str = "Adwaita-dark";
+const DEFAULT_SYNC_SCROLL: &str = "true";
+const DEFAULT_DOM_INJECTION: &str = "true";
+const DEFAULT_DEBOUNCE: &str = "150";
+const DEFAULT_SHOW_METADATA: &str = "show";
+const DEFAULT_VIEW: &str = "dual-pane";
+const DEFAULT_READABLE_LINE: &str = "true";
+const DEFAULT_MAX_WIDTH: &str = "1000";
+
+// Keybindings
+const PREF_KEY_OPEN: &str = "key-open";
+const PREF_KEY_SAVE: &str = "key-save";
+const PREF_KEY_SAVE_AS: &str = "key-save-as";
+const PREF_KEY_EXPORT_PDF: &str = "key-export-pdf";
+const PREF_KEY_PREFS: &str = "key-preferences";
+const PREF_KEY_SHORTCUTS: &str = "key-shortcuts-help";
+const PREF_KEY_SEARCH: &str = "key-search";
+const PREF_KEY_TOGGLE_EDITOR: &str = "key-toggle-editor";
+const PREF_KEY_CYCLE_VIEW: &str = "key-cycle-view";
+const PREF_KEY_TOGGLE_READABLE: &str = "key-toggle-readable";
+const PREF_KEY_QUIT: &str = "key-quit";
+
+const DEFAULT_KEY_OPEN: &str = "<Control>o";
+const DEFAULT_KEY_SAVE: &str = "<Control>s";
+const DEFAULT_KEY_SAVE_AS: &str = "<Control><Shift>s";
+const DEFAULT_KEY_EXPORT_PDF: &str = "<Control>p";
+const DEFAULT_KEY_PREFS: &str = "<Control>comma";
+const DEFAULT_KEY_SHORTCUTS: &str = "<Control>question";
+const DEFAULT_KEY_SEARCH: &str = "<Control>f";
+const DEFAULT_KEY_TOGGLE_EDITOR: &str = "<Control>e";
+const DEFAULT_KEY_CYCLE_VIEW: &str = "<Control>l";
+const DEFAULT_KEY_TOGGLE_READABLE: &str = "<Control>r";
+const DEFAULT_KEY_QUIT: &str = "<Control>q";
 
 
 fn config_path() -> PathBuf {
@@ -133,15 +213,43 @@ fn save_pref(key: &str, value: &str) {
         .map(|(k, v)| format!("{}={}", k, v))
         .collect::<Vec<_>>()
         .join("\n");
-    let _ = std::fs::write(&path, content);
+    let mut final_content = content;
+    if !final_content.is_empty() {
+        final_content.push('\n');
+    }
+    let _ = std::fs::write(&path, final_content);
 }
 
 fn build_html_page(body: &str, dark: bool) -> String {
     let css = if dark { PREVIEW_CSS_DARK } else { PREVIEW_CSS_LIGHT };
+    
+    let is_readable = load_pref(PREF_READABLE_LINE, DEFAULT_READABLE_LINE) == "true";
+    let max_width = load_pref(PREF_MAX_WIDTH, DEFAULT_MAX_WIDTH);
+    
+    let readable_css = if is_readable {
+        format!("body {{ max-width: {}px; margin-left: auto !important; margin-right: auto !important; }}", max_width)
+    } else {
+        "".to_string()
+    };
+
     format!(
-        "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><style>{} {}</style></head><body>{}</body></html>",
-        css, PRINT_CSS, body
+        "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><style>{} {} {}</style></head><body>{}</body></html>",
+        css, PRINT_CSS, readable_css, body
     )
+}
+
+fn html_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
+}
+
+fn escape_javascript_string(s: &str) -> String {
+    s.replace('\\', "\\\\")
+        .replace('`', "\\`")
+        .replace('$', "\\$")
 }
 
 fn base_uri_for_preview(current_file: Option<&gio::File>) -> Option<String> {
@@ -188,12 +296,25 @@ fn create_pdf_filters() -> gio::ListStore {
     filters
 }
 
-fn build_ui(app: &Application) {
+fn apply_accels(app: &Application) {
+    app.set_accels_for_action("app.open", &[&load_pref(PREF_KEY_OPEN, DEFAULT_KEY_OPEN)]);
+    app.set_accels_for_action("app.save", &[&load_pref(PREF_KEY_SAVE, DEFAULT_KEY_SAVE)]);
+    app.set_accels_for_action("app.save-as", &[&load_pref(PREF_KEY_SAVE_AS, DEFAULT_KEY_SAVE_AS)]);
+    app.set_accels_for_action("app.export-pdf", &[&load_pref(PREF_KEY_EXPORT_PDF, DEFAULT_KEY_EXPORT_PDF)]);
+    app.set_accels_for_action("app.preferences", &[&load_pref(PREF_KEY_PREFS, DEFAULT_KEY_PREFS)]);
+    app.set_accels_for_action("app.shortcuts", &[&load_pref(PREF_KEY_SHORTCUTS, DEFAULT_KEY_SHORTCUTS)]);
+    app.set_accels_for_action("app.search", &[&load_pref(PREF_KEY_SEARCH, DEFAULT_KEY_SEARCH)]);
+    app.set_accels_for_action("app.toggle-editor", &[&load_pref(PREF_KEY_TOGGLE_EDITOR, DEFAULT_KEY_TOGGLE_EDITOR)]);
+    app.set_accels_for_action("app.cycle-view", &[&load_pref(PREF_KEY_CYCLE_VIEW, DEFAULT_KEY_CYCLE_VIEW)]);
+    app.set_accels_for_action("app.quit", &[&load_pref(PREF_KEY_QUIT, DEFAULT_KEY_QUIT)]);
+}
+
+fn build_ui(app: &Application, initial_file: Option<gio::File>) {
     let settings = Settings::default().expect("Failed to get default settings");
     settings.set_gtk_keynav_use_caret(false);
     settings.set_gtk_error_bell(false);
 
-    let current_file: Rc<RefCell<Option<gio::File>>> = Rc::new(RefCell::new(None));
+    let current_file: Rc<RefCell<Option<gio::File>>> = Rc::new(RefCell::new(initial_file.clone()));
     let vim_controller: Rc<RefCell<Option<EventControllerKey>>> =
         Rc::new(RefCell::new(None));
 
@@ -265,6 +386,12 @@ fn build_ui(app: &Application) {
         _ => style_mgr.set_color_scheme(ColorScheme::Default),
     }
     source_buffer.set_highlight_syntax(true);
+    // Add a special tag for the current search match
+    source_buffer.tag_table().add(&gtk4::TextTag::builder()
+        .name("active-match")
+        .background("#f5d67b")
+        .foreground("#000000")
+        .build());
     source_view.set_show_line_numbers(true);
     source_view.set_monospace(true);
     source_view.set_tab_width(4);
@@ -302,6 +429,239 @@ fn build_ui(app: &Application) {
         .hexpand(true)
         .build();
 
+    // --- Sync Scroll ---
+    {
+        let editor_adj = editor_scroll.vadjustment();
+        let wv = webview.clone();
+        
+        let sync_scroll = {
+            let editor_adj = editor_adj.clone();
+            let wv = wv.clone();
+            move || {
+                let value = editor_adj.value();
+                let upper = editor_adj.upper();
+                let page_size = editor_adj.page_size();
+                if upper > page_size {
+                    let percent = value / (upper - page_size);
+                    let script = format!(
+                        "window.scrollTo(0, (document.documentElement.scrollHeight - window.innerHeight) * {});",
+                        percent
+                    );
+                    wv.evaluate_javascript(&script, None, None, None::<&gio::Cancellable>, |_| {});
+                }
+            }
+        };
+
+        editor_adj.connect_value_changed({
+            let sync_scroll = sync_scroll.clone();
+            move |_| {
+                if load_pref(PREF_SYNC_SCROLL, DEFAULT_SYNC_SCROLL) == "true" {
+                    sync_scroll();
+                }
+            }
+        });
+
+        wv.connect_load_changed({
+            let editor_adj = editor_adj.clone();
+            move |wv, event| {
+                if event == webkit6::LoadEvent::Finished
+                    && load_pref(PREF_SYNC_SCROLL, DEFAULT_SYNC_SCROLL) == "true"
+                {
+                    let value = editor_adj.value();
+                    let upper = editor_adj.upper();
+                    let page_size = editor_adj.page_size();
+                    if upper > page_size {
+                        let percent = value / (upper - page_size);
+                        let script = format!(
+                            "window.scrollTo(0, (document.documentElement.scrollHeight - window.innerHeight) * {});",
+                            percent
+                        );
+                        wv.evaluate_javascript(&script, None, None, None::<&gio::Cancellable>, |_| {});
+                    }
+                }
+            }
+        });
+    }
+
+    // --- Search & Replace UI ---
+    let search_bar = gtk4::SearchBar::builder()
+        .key_capture_widget(&source_view)
+        .build();
+    
+    // Style the search group for a floating look
+    let search_group = Box::new(Orientation::Horizontal, 10);
+    search_group.add_css_class("card");
+    
+    let provider = gtk4::CssProvider::new();
+    provider.load_from_data("
+        searchbar, revealer, searchbar > revealer > box { 
+            background-color: transparent; 
+            border-style: none; 
+            box-shadow: none; 
+        }
+        .card { 
+            border-radius: 12px; 
+            padding: 8px; 
+            border: 1px solid alpha(@window_fg_color, 0.1); 
+            background-color: @window_bg_color;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+    ");
+    gtk4::style_context_add_provider_for_display(
+        &gtk4::gdk::Display::default().expect("Could not connect to a display."),
+        &provider,
+        gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
+    );
+    search_group.set_margin_bottom(6);
+    search_group.set_margin_start(6);
+    search_group.set_margin_end(6);
+    search_group.set_halign(gtk4::Align::Center);
+    
+    // Left side: Vertical entries
+    let entries_vbox = Box::new(Orientation::Vertical, 4);
+    let search_entry = gtk4::SearchEntry::builder()
+        .placeholder_text("Find...")
+        .width_request(250)
+        .build();
+    let replace_entry = gtk4::Entry::builder()
+        .placeholder_text("Replace with...")
+        .width_request(250)
+        .build();
+    entries_vbox.append(&search_entry);
+    entries_vbox.append(&replace_entry);
+
+    // Right side: Horizontal options
+    let options_hbox = Box::new(Orientation::Horizontal, 4);
+    options_hbox.set_valign(gtk4::Align::Center);
+    
+    let regex_toggle = gtk4::ToggleButton::builder()
+        .label(".*")
+        .tooltip_text("Use Regular Expressions")
+        .build();
+    let prev_button = Button::builder().icon_name("go-up-symbolic").tooltip_text("Previous").build();
+    let next_button = Button::builder().icon_name("go-down-symbolic").tooltip_text("Next").build();
+    let replace_button = Button::builder().label("Replace").build();
+    let replace_all_button = Button::builder().label("Replace All").build();
+    let close_button = Button::builder().icon_name("window-close-symbolic").tooltip_text("Close").build();
+
+    options_hbox.append(&regex_toggle);
+    options_hbox.append(&prev_button);
+    options_hbox.append(&next_button);
+    options_hbox.append(&replace_button);
+    options_hbox.append(&replace_all_button);
+    options_hbox.append(&close_button);
+
+    search_group.append(&entries_vbox);
+    search_group.append(&options_hbox);
+    
+    search_bar.set_child(Some(&search_group));
+    search_bar.connect_entry(&search_entry);
+
+    {
+        let sb = search_bar.clone();
+        close_button.connect_clicked(move |_| {
+            sb.set_property("search-mode-enabled", false);
+        });
+    }
+
+    // --- Search Logic ---
+    let search_settings = sourceview5::SearchSettings::new();
+    let search_context = sourceview5::SearchContext::new(&source_buffer, Some(&search_settings));
+    search_context.set_highlight(true);
+
+    {
+        let settings = search_settings.clone();
+        let buf = source_buffer.clone();
+        search_entry.connect_search_changed(move |entry| {
+            settings.set_search_text(Some(&entry.text()));
+            let (start, end) = buf.bounds();
+            buf.remove_tag_by_name("active-match", &start, &end);
+        });
+    }
+
+    {
+        let settings = search_settings.clone();
+        regex_toggle.connect_toggled(move |btn| {
+            settings.set_regex_enabled(btn.is_active());
+        });
+    }
+
+    {
+        let context = search_context.clone();
+        let sv = source_view.clone();
+        next_button.connect_clicked(move |_| {
+            let buf = sv.buffer();
+            let mark = buf.mark("insert").unwrap();
+            let iter = buf.iter_at_mark(&mark);
+
+            if let Some((start, end, _)) = context.forward(&iter) {
+                let (b_start, b_end) = buf.bounds();
+                buf.remove_tag_by_name("active-match", &b_start, &b_end);
+                buf.apply_tag_by_name("active-match", &start, &end);
+
+                buf.select_range(&end, &start);
+                sv.grab_focus();
+
+                // Use a fresh iter for scrolling to avoid tree mismatch criticals
+                let mut fresh_iter = buf.iter_at_offset(start.offset());
+                sv.scroll_to_iter(&mut fresh_iter, 0.0, true, 0.5, 0.5);
+            }
+        });
+    }
+
+    {
+        let context = search_context.clone();
+        let sv = source_view.clone();
+        prev_button.connect_clicked(move |_| {
+            let buf = sv.buffer();
+            let mark = buf.mark("insert").unwrap();
+            let iter = buf.iter_at_mark(&mark);
+
+            if let Some((start, end, _)) = context.backward(&iter) {
+                let (b_start, b_end) = buf.bounds();
+                buf.remove_tag_by_name("active-match", &b_start, &b_end);
+                buf.apply_tag_by_name("active-match", &start, &end);
+
+                buf.select_range(&start, &end);
+                sv.grab_focus();
+
+                // Use a fresh iter for scrolling to avoid tree mismatch criticals
+                let mut fresh_iter = buf.iter_at_offset(start.offset());
+                sv.scroll_to_iter(&mut fresh_iter, 0.0, true, 0.5, 0.5);
+            }
+        });
+    }
+
+    {
+        let context = search_context.clone();
+        let re = replace_entry.clone();
+        replace_button.connect_clicked(move |_| {
+            let text = re.text().to_string();
+            let buf = context.buffer().downcast::<SourceBuffer>().unwrap();
+            if let Some((start, end)) = buf.selection_bounds() {
+                let mut start_mut = start;
+                let mut end_mut = end;
+                let _ = context.replace(&mut start_mut, &mut end_mut, &text);
+            }
+        });
+    }
+
+    {
+        let context = search_context.clone();
+        let re = replace_entry.clone();
+        replace_all_button.connect_clicked(move |_| {
+            let text = re.text().to_string();
+            let _ = context.replace_all(&text);
+        });
+    }
+
+    let main_overlay = gtk4::Overlay::builder()
+        .child(&paned)
+        .build();
+    main_overlay.add_overlay(&search_bar);
+    search_bar.set_valign(gtk4::Align::Start);
+    search_bar.set_halign(gtk4::Align::Center);
+
     paned.set_start_child(Some(&editor_scroll));
     paned.set_end_child(Some(&preview_scroll));
     paned.set_shrink_start_child(true);
@@ -310,10 +670,26 @@ fn build_ui(app: &Application) {
     let saved_paned_pos: Rc<RefCell<i32>> = Rc::new(RefCell::new(400));
     let left_panel_visible: Rc<RefCell<bool>> = Rc::new(RefCell::new(true));
 
+    // Apply Default View Mode
+    {
+        let saved_view = load_pref(PREF_DEFAULT_VIEW, DEFAULT_VIEW);
+        match saved_view.as_str() {
+            "preview-only" => {
+                paned.set_position(0);
+                sidebar_toggle.set_icon_name("sidebar-show-symbolic");
+                sidebar_toggle.set_tooltip_text(Some("Show left panel"));
+                *left_panel_visible.borrow_mut() = false;
+            }
+            "editor-only" => {
+            }
+            _ => {}
+        }
+    }
+
     // --- Window ---
     let content = Box::new(Orientation::Vertical, 0);
     content.append(&header_bar);
-    content.append(&paned);
+    content.append(&main_overlay);
 
     let window = ApplicationWindow::builder()
         .application(app)
@@ -345,23 +721,118 @@ fn build_ui(app: &Application) {
     }
 
     // --- Live Preview ---
+    let pending_update: Rc<RefCell<Option<glib::SourceId>>> = Rc::new(RefCell::new(None));
+    let is_first_render = Rc::new(RefCell::new(true));
+
     let refresh_preview = {
         let wv = webview.clone();
         let cf_preview = current_file.clone();
-        move |buffer: &SourceBuffer| {
+        let is_first = is_first_render.clone();
+        move |buffer: &SourceBuffer, force_full_reload: bool| {
             let text = buffer.text(&buffer.start_iter(), &buffer.end_iter(), false);
-            let parser = Parser::new_ext(&text, Options::all());
+            
+            let metadata_mode = load_pref(PREF_SHOW_METADATA, DEFAULT_SHOW_METADATA);
+            let mut options = Options::all();
+            
+            // "ignore" means we don't want the parser to treat it as special metadata
+            if metadata_mode == "ignore" {
+                options.remove(Options::ENABLE_YAML_STYLE_METADATA_BLOCKS);
+            }
+
+            let parser = Parser::new_ext(&text, options);
             let mut html_out = String::new();
-            html::push_html(&mut html_out, parser);
-            let base_uri = base_uri_for_preview(cf_preview.borrow().as_ref());
+            
+            if metadata_mode == "show" || metadata_mode == "hide" {
+                let mut events = Vec::new();
+                let mut in_metadata = false;
+                for event in parser {
+                    match event {
+                        pulldown_cmark::Event::Start(pulldown_cmark::Tag::MetadataBlock(_)) => {
+                            in_metadata = true;
+                            if metadata_mode == "show" {
+                                events.push(pulldown_cmark::Event::Html("<div class=\"metadata\">".into()));
+                            }
+                        }
+                        pulldown_cmark::Event::End(pulldown_cmark::TagEnd::MetadataBlock(_)) => {
+                            in_metadata = false;
+                            if metadata_mode == "show" {
+                                events.push(pulldown_cmark::Event::Html("</div>".into()));
+                            }
+                        }
+                        pulldown_cmark::Event::Text(t) => {
+                            if in_metadata {
+                                if metadata_mode == "show" {
+                                    events.push(pulldown_cmark::Event::Html(html_escape(&t).into()));
+                                }
+                            } else {
+                                events.push(pulldown_cmark::Event::Text(t));
+                            }
+                        }
+                        _ => {
+                            if !in_metadata {
+                                events.push(event);
+                            }
+                        }
+                    }
+                }
+                html::push_html(&mut html_out, events.into_iter());
+            } else {
+                html::push_html(&mut html_out, parser);
+            }
+
+            let dom_injection = load_pref(PREF_DOM_INJECTION, DEFAULT_DOM_INJECTION) == "true";
             let dark = StyleManager::default().is_dark();
-            wv.load_html(&build_html_page(&html_out, dark), base_uri.as_deref());
-            let (r, g, b) = if dark { (0.102, 0.102, 0.102) } else { (0.98, 0.98, 0.98) };
-            wv.set_background_color(&gtk4::gdk::RGBA::new(r, g, b, 1.0));
+            let first = *is_first.borrow();
+
+            if dom_injection && !first && !force_full_reload {
+                let escaped_html = escape_javascript_string(&html_out);
+                let js = format!("document.body.innerHTML = `{}`;", escaped_html);
+                wv.evaluate_javascript(&js, None, None, None::<&gio::Cancellable>, |_| {});
+            } else {
+                let base_uri = base_uri_for_preview(cf_preview.borrow().as_ref());
+                let body = if html_out.is_empty() {
+                    "<p class='placeholder'>Start typing markdown on the left…</p>".to_string()
+                } else {
+                    html_out
+                };
+                wv.load_html(&build_html_page(&body, dark), base_uri.as_deref());
+                let (r, g, b) = if dark { (0.102, 0.102, 0.102) } else { (0.98, 0.98, 0.98) };
+                wv.set_background_color(&gtk4::gdk::RGBA::new(r, g, b, 1.0));
+                *is_first.borrow_mut() = false;
+            }
         }
     };
-    source_buffer.connect_changed(move |buffer| {
-        refresh_preview(buffer);
+
+    source_buffer.connect_changed({
+        let refresh_preview = refresh_preview.clone();
+        let pending_update = pending_update.clone();
+        move |buffer| {
+            if let Some(source_id) = pending_update.borrow_mut().take() {
+                source_id.remove();
+            }
+
+            let debounce_ms = load_pref(PREF_DEBOUNCE, DEFAULT_DEBOUNCE)
+                .parse::<f64>()
+                .unwrap_or(150.0) as u32;
+
+            if debounce_ms == 0 {
+                refresh_preview(buffer, false);
+            } else {
+                let buffer = buffer.clone();
+                let refresh_preview = refresh_preview.clone();
+                let pending_update_inner = pending_update.clone();
+
+                let source_id = glib::timeout_add_local(
+                    std::time::Duration::from_millis(debounce_ms as u64),
+                    move || {
+                        refresh_preview(&buffer, false);
+                        *pending_update_inner.borrow_mut() = None;
+                        glib::ControlFlow::Break
+                    },
+                );
+                *pending_update.borrow_mut() = Some(source_id);
+            }
+        }
     });
 
     StyleManager::default().connect_dark_notify({
@@ -409,6 +880,7 @@ fn build_ui(app: &Application) {
         let w = window.clone();
         let buf = source_buffer.clone();
         let cf = current_file.clone();
+        let is_first = is_first_render.clone();
         open_action.connect_activate(move |_, _| {
             let dialog = gtk4::FileDialog::builder()
                 .title("Open Markdown File")
@@ -416,6 +888,7 @@ fn build_ui(app: &Application) {
             dialog.set_filters(Some(&create_md_filters()));
             let buf = buf.clone();
             let cf = cf.clone();
+            let is_first = is_first.clone();
             let w = w.clone();
             let w_inner = w.clone();
             dialog.open(Some(&w), None::<&gio::Cancellable>, move |result| {
@@ -424,6 +897,7 @@ fn build_ui(app: &Application) {
                         match std::fs::read_to_string(&path) {
                             Ok(content) => {
                                 *cf.borrow_mut() = Some(file);
+                                *is_first.borrow_mut() = true;
                                 buf.set_text(&content);
                                 if let Some(name) = path.file_name() {
                                     w_inner.set_title(Some(&format!("{} — MarkView", name.to_string_lossy())));
@@ -567,13 +1041,78 @@ fn build_ui(app: &Application) {
     }
     app.add_action(&export_pdf_action);
 
+    // Toggle Editor
+    let toggle_editor_action = gio::SimpleAction::new("toggle-editor", None);
+    {
+        let paned = paned.clone();
+        let sidebar_toggle = sidebar_toggle.clone();
+        let left_panel_visible = left_panel_visible.clone();
+        let saved_paned_pos = saved_paned_pos.clone();
+        toggle_editor_action.connect_activate(move |_, _| {
+            let is_visible = *left_panel_visible.borrow();
+            if is_visible {
+                *saved_paned_pos.borrow_mut() = paned.position();
+                paned.set_position(0);
+                sidebar_toggle.set_icon_name("sidebar-show-symbolic");
+                sidebar_toggle.set_tooltip_text(Some("Show left panel"));
+                *left_panel_visible.borrow_mut() = false;
+            } else {
+                paned.set_position(*saved_paned_pos.borrow());
+                sidebar_toggle.set_icon_name("view-dual-symbolic");
+                sidebar_toggle.set_tooltip_text(Some("Hide left panel"));
+                *left_panel_visible.borrow_mut() = true;
+            }
+        });
+    }
+    app.add_action(&toggle_editor_action);
+
+    // Toggle Readable Line Length
+    let toggle_readable_action = gio::SimpleAction::new("toggle-readable", None);
+    {
+        let sb = source_buffer.clone();
+        let refresh_preview = refresh_preview.clone();
+        toggle_readable_action.connect_activate(move |_, _| {
+            let current = load_pref(PREF_READABLE_LINE, DEFAULT_READABLE_LINE) == "true";
+            save_pref(PREF_READABLE_LINE, if current { "false" } else { "true" });
+            refresh_preview(&sb, true);
+        });
+    }
+    app.add_action(&toggle_readable_action);
+
+    // Cycle View Modes
+    let cycle_view_action = gio::SimpleAction::new("cycle-view", None);
+    {
+        let paned = paned.clone();
+        let sidebar_toggle = sidebar_toggle.clone();
+        let left_panel_visible = left_panel_visible.clone();
+        let saved_paned_pos = saved_paned_pos.clone();
+        cycle_view_action.connect_activate(move |_, _| {
+            let current_pos = paned.position();
+            if current_pos == 0 {
+                // Currently Preview Only -> Switch back to Dual Pane
+                paned.set_position(*saved_paned_pos.borrow());
+                *left_panel_visible.borrow_mut() = true;
+                sidebar_toggle.set_icon_name("view-dual-symbolic");
+            } else {
+                // Currently Dual Pane -> Switch to Preview Only
+                *saved_paned_pos.borrow_mut() = current_pos;
+                paned.set_position(0);
+                *left_panel_visible.borrow_mut() = false;
+                sidebar_toggle.set_icon_name("sidebar-show-symbolic");
+            }
+        });
+    }
+    app.add_action(&cycle_view_action);
+
     // Preferences
     let preferences_action = gio::SimpleAction::new("preferences", None);
     {
         let w = window.clone();
         let sv = source_view.clone();
-        let sb = source_buffer.clone();
+        let sb_pref = source_buffer.clone();
         let vc = vim_controller.clone();
+        let app = app.clone();
+        let refresh_preview = refresh_preview.clone();
         preferences_action.connect_activate(move |_, _| {
             let theme_model = gio::ListStore::new::<StringObject>();
             theme_model.append(&StringObject::new("Auto"));
@@ -649,7 +1188,7 @@ fn build_ui(app: &Application) {
             scheme_row.set_selected(scheme_idx as u32);
             let scheme_ids = Rc::new(scheme_ids);
             scheme_row.connect_selected_notify({
-                let sb = sb.clone();
+                let sb = sb_pref.clone();
                 let scheme_ids = scheme_ids.clone();
                 move |row| {
                     let idx = row.selected() as usize;
@@ -712,7 +1251,12 @@ fn build_ui(app: &Application) {
             });
             line_numbers_row.connect_active_notify({
                 let sv = sv.clone();
-                move |row| sv.set_show_line_numbers(row.is_active())
+                let refresh_preview = refresh_preview.clone();
+                let sb = sb_pref.clone();
+                move |row| {
+                    sv.set_show_line_numbers(row.is_active());
+                    refresh_preview(&sb, true);
+                }
             });
             word_wrap_row.connect_active_notify({
                 let sv = sv.clone();
@@ -733,15 +1277,327 @@ fn build_ui(app: &Application) {
                 .icon_name("accessories-text-editor-symbolic")
                 .build();
             editor_page.add(&editor_group);
+
+            // Synchronization Page
+            let sync_group = PreferencesGroup::new();
+            sync_group.set_title("Synchronization");
+
+            let sync_scroll_row = SwitchRow::builder()
+                .title("Sync Scroll")
+                .subtitle("Preview pane follows editor scroll")
+                .active(load_pref(PREF_SYNC_SCROLL, DEFAULT_SYNC_SCROLL) == "true")
+                .build();
+            sync_scroll_row.connect_active_notify(|row| {
+                save_pref(PREF_SYNC_SCROLL, if row.is_active() { "true" } else { "false" });
+            });
+
+            let dom_injection_row = SwitchRow::builder()
+                .title("DOM Injection")
+                .subtitle("Smoothly update preview without reloading")
+                .active(load_pref(PREF_DOM_INJECTION, DEFAULT_DOM_INJECTION) == "true")
+                .build();
+            dom_injection_row.connect_active_notify(|row| {
+                save_pref(PREF_DOM_INJECTION, if row.is_active() { "true" } else { "false" });
+            });
+
+            let debounce_adjustment = gtk4::Adjustment::new(
+                load_pref(PREF_DEBOUNCE, DEFAULT_DEBOUNCE).parse::<f64>().unwrap_or(150.0),
+                0.0, 5000.0, 10.0, 100.0, 0.0
+            );
+            let debounce_row = adw::SpinRow::builder()
+                .title("Debounce Duration (ms)")
+                .subtitle("Delay before updating preview (0 for live)")
+                .adjustment(&debounce_adjustment)
+                .build();
+            debounce_row.connect_value_notify(|row| {
+                save_pref(PREF_DEBOUNCE, &format!("{:.0}", row.value()));
+            });
+
+            sync_group.add(&sync_scroll_row);
+            sync_group.add(&dom_injection_row);
+            sync_group.add(&debounce_row);
+
+            let sync_page = PreferencesPage::builder()
+                .title("Synchronization")
+                .icon_name("view-refresh-symbolic")
+                .build();
+            sync_page.add(&sync_group);
+
+            // Interface Page
+            let ui_group = PreferencesGroup::new();
+            ui_group.set_title("Interface");
+
+            let metadata_model = gio::ListStore::new::<StringObject>();
+            metadata_model.append(&StringObject::new("Show Metadata"));
+            metadata_model.append(&StringObject::new("Hide Metadata"));
+            metadata_model.append(&StringObject::new("Ignore Metadata"));
+            let metadata_expr = PropertyExpression::new(StringObject::static_type(), None::<&gtk4::Expression>, "string");
+            let metadata_row = ComboRow::builder()
+                .title("Metadata Handling")
+                .subtitle("How to treat YAML headers")
+                .model(&metadata_model)
+                .expression(&metadata_expr)
+                .build();
+            let saved_metadata = load_pref(PREF_SHOW_METADATA, DEFAULT_SHOW_METADATA);
+            metadata_row.set_selected(match saved_metadata.as_str() {
+                "hide" => 1,
+                "ignore" => 2,
+                _ => 0,
+            });
+            metadata_row.connect_selected_notify({
+                let refresh_preview = refresh_preview.clone();
+                let sb = sb_pref.clone();
+                move |row| {
+                    save_pref(
+                        PREF_SHOW_METADATA,
+                        match row.selected() {
+                            1 => "hide",
+                            2 => "ignore",
+                            _ => "show",
+                        },
+                    );
+                    refresh_preview(&sb, true);
+                }
+            });
+
+            let view_model = gio::ListStore::new::<StringObject>();
+            view_model.append(&StringObject::new("Dual Pane"));
+            view_model.append(&StringObject::new("Preview Only"));
+            let view_expr = PropertyExpression::new(StringObject::static_type(), None::<&gtk4::Expression>, "string");
+            let view_row = ComboRow::builder()
+                .title("Default View Mode")
+                .subtitle("Initial layout when opening a file")
+                .model(&view_model)
+                .expression(&view_expr)
+                .build();
+            let saved_view = load_pref(PREF_DEFAULT_VIEW, DEFAULT_VIEW);
+            view_row.set_selected(match saved_view.as_str() {
+                "preview-only" => 1,
+                _ => 0,
+            });
+            view_row.connect_selected_notify({
+                let refresh_preview = refresh_preview.clone();
+                let sb = sb_pref.clone();
+                move |row| {
+                    save_pref(
+                        PREF_DEFAULT_VIEW,
+                        match row.selected() {
+                            1 => "preview-only",
+                            _ => "dual-pane",
+                        },
+                    );
+                    refresh_preview(&sb, true);
+                }
+            });
+
+            let readable_row = SwitchRow::builder()
+                .title("Readable Line Length")
+                .subtitle("Limit preview content width for better readability")
+                .active(load_pref(PREF_READABLE_LINE, DEFAULT_READABLE_LINE) == "true")
+                .build();
+
+            let width_adjustment = gtk4::Adjustment::new(
+                load_pref(PREF_MAX_WIDTH, DEFAULT_MAX_WIDTH).parse::<f64>().unwrap_or(1000.0),
+                400.0, 3000.0, 50.0, 200.0, 0.0
+            );
+            let width_row = adw::SpinRow::builder()
+                .title("Max Content Width (px)")
+                .subtitle("Maximum width when Readable Line Length is enabled")
+                .adjustment(&width_adjustment)
+                .sensitive(readable_row.is_active())
+                .build();
+
+            readable_row.connect_active_notify({
+                let refresh_preview = refresh_preview.clone();
+                let sb = sb_pref.clone();
+                let width_row = width_row.clone();
+                move |row| {
+                    let active = row.is_active();
+                    save_pref(PREF_READABLE_LINE, if active { "true" } else { "false" });
+                    width_row.set_sensitive(active);
+                    refresh_preview(&sb, true);
+                }
+            });
+            width_row.connect_value_notify({
+                let refresh_preview = refresh_preview.clone();
+                let sb = sb_pref.clone();
+                move |row| {
+                    save_pref(PREF_MAX_WIDTH, &format!("{:.0}", row.value()));
+                    refresh_preview(&sb, true);
+                }
+            });
+
+            ui_group.add(&metadata_row);
+            ui_group.add(&view_row);
+            ui_group.add(&readable_row);
+            ui_group.add(&width_row);
+
+            let ui_page = PreferencesPage::builder()
+                .title("Interface")
+                .icon_name("window-new-symbolic")
+                .build();
+            ui_page.add(&ui_group);
+
+            // Shortcuts Page
+            let shortcuts_group = PreferencesGroup::new();
+            shortcuts_group.set_title("Keyboard Shortcuts");
+
+            let create_shortcut_row = |title: &str, pref_key: &'static str, default: &str, app_ptr: Application, parent_win: &adw::ApplicationWindow| {
+                let initial_subtitle = html_escape(&load_pref(pref_key, default));
+                let row = adw::ActionRow::builder()
+                    .title(title)
+                    .subtitle(&initial_subtitle)
+                    .use_markup(true)
+                    .build();
+                
+                let edit_button = Button::builder()
+                    .label("Edit")
+                    .valign(gtk4::Align::Center)
+                    .build();
+
+                let app_ptr = app_ptr.clone();
+                let parent_win = parent_win.clone();
+                let row_clone = row.clone();
+                let pref_key_static: &'static str = pref_key;
+                let default_static = default.to_string();
+                let title_owned = title.to_string();
+
+                edit_button.connect_clicked(move |_| {
+                    let grabber = adw::Window::builder()
+                        .title("Grab Shortcut")
+                        .modal(true)
+                        .transient_for(&parent_win)
+                        .default_width(300)
+                        .default_height(150)
+                        .build();
+
+                    let content = Box::new(Orientation::Vertical, 10);
+                    content.set_margin_top(20);
+                    content.set_margin_bottom(20);
+                    content.set_margin_start(20);
+                    content.set_margin_end(20);
+                    
+                    let label = gtk4::Label::builder()
+                        .label(&format!("Press keys for: {}", title_owned))
+                        .use_markup(false)
+                        .build();
+                    let current_label = gtk4::Label::builder()
+                        .label(&html_escape(&load_pref(pref_key_static, &default_static)))
+                        .css_classes(vec!["title-2".to_string()])
+                        .use_markup(true)
+                        .build();
+                    
+                    let hint = gtk4::Label::builder()
+                        .label("Press Enter to Save, Esc to Reset")
+                        .use_markup(false)
+                        .build();
+                    hint.add_css_class("dim-label");
+
+                    content.append(&label);
+                    content.append(&current_label);
+                    content.append(&hint);
+                    grabber.set_content(Some(&content));
+
+                    let recorded_accel = Rc::new(RefCell::new(load_pref(pref_key_static, &default_static)));
+
+                    let key_ctrl = EventControllerKey::new();
+                    let recorded_accel_inner = recorded_accel.clone();
+                    let current_label_inner = current_label.clone();
+                    let grabber_inner = grabber.clone();
+                    let app_inner = app_ptr.clone();
+                    let row_inner = row_clone.clone();
+                    let default_inner = default_static.clone();
+
+                    key_ctrl.connect_key_pressed(move |_, key, _, modifier| {
+                        let key_name = key.name().unwrap_or_else(|| "unknown".into());
+
+                        if key_name == "Return" {
+                            let accel = recorded_accel_inner.borrow();
+                            save_pref(pref_key_static, &accel);
+                            row_inner.set_subtitle(&html_escape(&accel));
+                            apply_accels(&app_inner);
+                            grabber_inner.close();
+                            return glib::Propagation::Stop;
+                        }
+
+                        if key_name == "Escape" {
+                            save_pref(pref_key_static, &default_inner);
+                            row_inner.set_subtitle(&html_escape(&default_inner));
+                            apply_accels(&app_inner);
+                            grabber_inner.close();
+                            return glib::Propagation::Stop;
+                        }
+
+                        // Ignore pure modifier presses
+                        if key_name.contains("Control") || key_name.contains("Shift") || 
+                           key_name.contains("Alt") || key_name.contains("Super") || key_name.contains("Meta") {
+                            return glib::Propagation::Stop;
+                        }
+
+                        let mut accel = String::new();
+                        if modifier.contains(gtk4::gdk::ModifierType::CONTROL_MASK) { accel.push_str("<Control>"); }
+                        if modifier.contains(gtk4::gdk::ModifierType::SHIFT_MASK) { accel.push_str("<Shift>"); }
+                        if modifier.contains(gtk4::gdk::ModifierType::ALT_MASK) { accel.push_str("<Alt>"); }
+                        if modifier.contains(gtk4::gdk::ModifierType::SUPER_MASK) || modifier.contains(gtk4::gdk::ModifierType::META_MASK) { 
+                            accel.push_str("<Super>"); 
+                        }
+                        
+                        accel.push_str(&key_name);
+                        *recorded_accel_inner.borrow_mut() = accel.clone();
+                        current_label_inner.set_text(&html_escape(&accel));
+
+                        glib::Propagation::Stop
+                    });
+
+                    grabber.add_controller(key_ctrl);
+                    grabber.present();
+                });
+
+                row.add_suffix(&edit_button);
+                row
+            };
+
+            shortcuts_group.add(&create_shortcut_row("Open File", PREF_KEY_OPEN, DEFAULT_KEY_OPEN, app.clone(), &w));
+            shortcuts_group.add(&create_shortcut_row("Save File", PREF_KEY_SAVE, DEFAULT_KEY_SAVE, app.clone(), &w));
+            shortcuts_group.add(&create_shortcut_row("Save As", PREF_KEY_SAVE_AS, DEFAULT_KEY_SAVE_AS, app.clone(), &w));
+            shortcuts_group.add(&create_shortcut_row("Export PDF", PREF_KEY_EXPORT_PDF, DEFAULT_KEY_EXPORT_PDF, app.clone(), &w));
+            shortcuts_group.add(&create_shortcut_row("Open Preferences", PREF_KEY_PREFS, DEFAULT_KEY_PREFS, app.clone(), &w));
+            shortcuts_group.add(&create_shortcut_row("Search &amp; Replace", PREF_KEY_SEARCH, DEFAULT_KEY_SEARCH, app.clone(), &w));
+            shortcuts_group.add(&create_shortcut_row("Toggle Editor Pane", PREF_KEY_TOGGLE_EDITOR, DEFAULT_KEY_TOGGLE_EDITOR, app.clone(), &w));
+            shortcuts_group.add(&create_shortcut_row("Cycle View Modes", PREF_KEY_CYCLE_VIEW, DEFAULT_KEY_CYCLE_VIEW, app.clone(), &w));
+            shortcuts_group.add(&create_shortcut_row("Toggle Readable Width", PREF_KEY_TOGGLE_READABLE, DEFAULT_KEY_TOGGLE_READABLE, app.clone(), &w));
+            shortcuts_group.add(&create_shortcut_row("Keyboard Shortcuts Dialog", PREF_KEY_SHORTCUTS, DEFAULT_KEY_SHORTCUTS, app.clone(), &w));
+            shortcuts_group.add(&create_shortcut_row("Quit", PREF_KEY_QUIT, DEFAULT_KEY_QUIT, app.clone(), &w));
+
+            let shortcuts_page = PreferencesPage::builder()
+                .title("Shortcuts")
+                .icon_name("preferences-desktop-keyboard-shortcuts-symbolic")
+                .build();
+            shortcuts_page.add(&shortcuts_group);
+
             let prefs = PreferencesDialog::builder()
                 .title("Preferences")
                 .build();
             prefs.add(&appearance_page);
             prefs.add(&editor_page);
+            prefs.add(&sync_page);
+            prefs.add(&ui_page);
+            prefs.add(&shortcuts_page);
             prefs.present(Some(&w));
         });
     }
     app.add_action(&preferences_action);
+
+    // Search
+    let search_action = gio::SimpleAction::new("search", None);
+    {
+        let sb = search_bar.clone();
+        search_action.connect_activate(move |_, _| {
+            let is_visible = sb.property::<bool>("search-mode-enabled");
+            sb.set_property("search-mode-enabled", !is_visible);
+        });
+    }
+    app.add_action(&search_action);
 
     // About
     let about_action = gio::SimpleAction::new("about", None);
@@ -794,21 +1650,41 @@ fn build_ui(app: &Application) {
     }
     app.add_action(&quit_action);
 
-    app.set_accels_for_action("app.open", &["<Control>o"]);
-    app.set_accels_for_action("app.save", &["<Control>s"]);
-    app.set_accels_for_action("app.save-as", &["<Control><Shift>s"]);
-    app.set_accels_for_action("app.export-pdf", &["<Control>p"]);
-    app.set_accels_for_action("app.preferences", &["<Control>comma"]);
-    app.set_accels_for_action("app.shortcuts", &["<Control>question"]);
-    app.set_accels_for_action("app.quit", &["<Control>q"]);
+    apply_accels(app);
 
     window.present();
+
+    if let Some(file) = initial_file {
+        if let Some(path) = file.path() {
+            match std::fs::read_to_string(&path) {
+                Ok(content) => {
+                    source_buffer.set_text(&content);
+                    if let Some(name) = path.file_name() {
+                        window.set_title(Some(&format!("{} — MarkView", name.to_string_lossy())));
+                    }
+                }
+                Err(e) => eprintln!("Failed to read file: {e}"),
+            }
+        }
+    }
 }
 
 fn main() {
     let app = Application::builder()
-        .application_id("com.example.MarkView")
+        .application_id("com.v8v88v8v88.MarkView")
+        .flags(gio::ApplicationFlags::HANDLES_OPEN)
         .build();
-    app.connect_activate(build_ui);
+
+    app.connect_activate(|app| {
+        build_ui(app, None);
+    });
+
+    app.connect_open(|app, files, _| {
+        for file in files {
+            build_ui(app, Some(file.clone()));
+            break;
+        }
+    });
+
     app.run();
 }

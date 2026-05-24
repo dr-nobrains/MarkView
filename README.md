@@ -1,58 +1,25 @@
-# MarkView
+# MarkView (Enhanced)
 
-MarkView is a sleek, GTK-based Markdown viewer that provides real-time rendering and syntax highlighting.
+This repository contains an enhanced version of the [original MarkVue project](https://github.com/V8V88V8V88/MarkVue). While maintaining the core goal of a sleek GTK-based Markdown viewer, this version introduces significant architectural improvements, professional features, and a modern UI/UX.
 
-![markview](screenshot.png)
+## 🚀 Key Enhancements
 
-## Features
+Following features and improvements have been implemented over the original project:
 
-- Real-time Markdown rendering
-- Syntax highlighting for Markdown input
-- Split-pane interface for easy editing and previewing
-- Modern, native GTK4 design
-- Simple, intuitive user interface
+### 🎨 Modernized UI/UX
+- **Hideable Side Panel**: Added the ability to toggle the editor pane for focused reading.
 
-## Prerequisites
+### ⚡ Performance & Rendering
+- **Hybrid Rendering (DOM Injection)**: Replaced full-page reloads with JavaScript-based DOM injection. The preview now updates instantly as you type without flickering or losing scroll position.
+- **Sync Scroll**: Implemented scroll synchronization, ensuring the preview follows the editor's position accurately.
 
-- Rust and Cargo
-- GTK4 development libraries
+### 🛠️ Advanced Editor Features
+- **Advanced Search & Replace**: Implmented a non-intrusive search and replace functionality with support for Regular Expressions (Regex).
 
-## Installation
+### 📄 Workflow & Export
+- **Metadata Handling**: Support for front-matter blocks, with user settings to show, hide, or ignore metadata during rendering.
+- **Customizable Shortcuts**: Implemented a comprehensive keyboard shortcut system where common actions can be remapped via the preferences.
 
-1. Clone the repository:
-```bash
-git clone https://github.com/v8v88v8v88/markview.git
-cd markview
-```
-
-2. Build and run:
-```bash
-cargo run
-```
-
-## Dependencies
-
-- gtk4 (0.9)
-- gio (0.19)
-- glib (0.19)
-- sourceview5 (0.9)
-- pulldown-cmark (0.10)
-
-## Usage
-
-1. Launch MarkView
-2. Type Markdown in the left pane
-3. View rendered output in real-time on the right pane
-4. Use the hamburger menu for additional options
-
-## Contributing
-
-Contributions are welcome! Submit a Pull Request.
-
-## License
-
-GPL v2 License - see [LICENSE](LICENSE) file for details.
-
-## Author
-
-[v8v88v8v88](https://github.com/v8v88v8v88)
+## 📚 Documentation
+For the original project description, installation basics, and core dependencies, please refer to:
+- The [Original Repository](https://github.com/V8V88V8V88/MarkVue)
